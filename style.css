@@ -1,0 +1,43 @@
+style>
+  .imagepool {
+    display: none;
+  }
+  
+  #canvas1{
+    border: 1px solid purple;
+    background-color: white;
+  }
+.main {
+  padding: 4px;
+  border: 1px solid black;
+  display: flex;
+  flex-direction: row;
+  font-family: sans-serif;
+  background-color: tan;
+  border-radius: 8px;
+}
+.tools {
+  padding: 4px;
+}
+.pallette{
+  width: 100%;
+  min-width: 200px;
+  height: 200px;
+  border: 1px solid black;
+  overflow: auto;
+}
+
+.chosen {
+  height: 64px;
+  width: 64px;
+  border: 1px solid green;
+  display: flex;
+  flex-direction: row;
+}
+.cell{
+border: 1px solid blue;
+}
+
+.footer {
+  display: block;
+}
