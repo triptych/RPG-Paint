@@ -1,15 +1,18 @@
 var img = new Image();
-img.setAttribute('crossOrigin', 'anonymous');
+img.onerror = function(e) {
+  console.error('Error loading image:', e);
+};
 img.onload = function(e) {
-  console.log(e.target)
+  console.log('Image loaded successfully');
   genPallette(document.querySelector('#inner'));
 }
 img.src = 'ProjectUtumno_full.png';
 
 let selectedTilePos = { row: 0, col: 0 }; // Track the selected tile position
+let lastSelectedCell = null; // Track the last selected cell for highlighting
 
 const drawGrid = (ctx, width, height, gridSize) => {
-  ctx.strokeStyle = '#f2f2f2';
+  ctx.strokeStyle = '#e0e0e0';
   ctx.lineWidth = 1;
 
   // Draw vertical lines
@@ -36,6 +39,19 @@ const genViewPort = () => {
   ctx.fillRect(0, 0, vp.width, vp.height);
 
   drawGrid(ctx, vp.width, vp.height, 32);
+
+  // Setup download functionality
+  const downloadLink = document.querySelector('#downloadable');
+  downloadLink.addEventListener('click', function(e) {
+    e.preventDefault();
+    // Create a temporary link element
+    const tempLink = document.createElement('a');
+    tempLink.download = 'rpg-paint-creation.png';
+    tempLink.href = vp.toDataURL('image/png');
+    document.body.appendChild(tempLink);
+    tempLink.click();
+    document.body.removeChild(tempLink);
+  });
 
   vp.addEventListener("click", (e) => {
     applyTileToView(e);
@@ -81,6 +97,9 @@ const genPallette = (el) => {
   const baseWidth = 32;
   const baseHeight = 32;
 
+  // Clear existing content
+  el.innerHTML = '';
+
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
       let can = document.createElement("canvas");
@@ -91,12 +110,17 @@ const genPallette = (el) => {
       });
       can.dataset.row = i;
       can.dataset.col = j;
-      el.appendChild(can)
+      el.appendChild(can);
       let ctx = can.getContext("2d");
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(img, baseWidth * j, baseHeight * i, baseWidth, baseHeight, 0, 0, 64, 64)
+      ctx.drawImage(img, baseWidth * j, baseHeight * i, baseWidth, baseHeight, 0, 0, 64, 64);
       can.addEventListener("click", () => {
-        selectedTile(can.dataset.row, can.dataset.col, can)
+        if (lastSelectedCell) {
+          lastSelectedCell.style.borderColor = 'transparent';
+        }
+        can.style.borderColor = '#3498db';
+        lastSelectedCell = can;
+        selectedTile(can.dataset.row, can.dataset.col, can);
       });
     }
   }
@@ -111,7 +135,7 @@ const selectedTile = (row, col, can) => {
   let ctx = ccanvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, ccanvas.width, ccanvas.height);
-  ctx.drawImage(can, 0, 0, 64, 64, 0, 0, 64, 64)
+  ctx.drawImage(can, 0, 0, 64, 64, 0, 0, 64, 64);
 }
 
 window.addEventListener('load', () => {
