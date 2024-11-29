@@ -6,10 +6,21 @@ class Layer {
     this.canvas.height = 320;
     this.ctx = this.canvas.getContext('2d');
     this.visible = true;
+    this.tileData = []; // Store tile positions and their source coordinates
   }
 
   clear() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.tileData = [];
+  }
+
+  addTile(gridX, gridY, sourceX, sourceY) {
+    this.tileData.push({
+      gridX,
+      gridY,
+      sourceX,
+      sourceY
+    });
   }
 }
 
@@ -61,6 +72,57 @@ class LayerManager {
     return this.layers.find(l => l.id === this.activeLayerId);
   }
 
+  saveState() {
+    const state = {
+      layers: this.layers.map(layer => ({
+        id: layer.id,
+        visible: layer.visible,
+        tileData: layer.tileData
+      })),
+      activeLayerId: this.activeLayerId,
+      nextLayerId: this.nextLayerId
+    };
+    localStorage.setItem('rpgPaintState', JSON.stringify(state));
+  }
+
+  loadState() {
+    const savedState = localStorage.getItem('rpgPaintState');
+    if (!savedState) return;
+
+    const state = JSON.parse(savedState);
+
+    // Clear existing layers
+    this.layers = [];
+
+    // Recreate layers from saved state
+    state.layers.forEach(layerData => {
+      const layer = new Layer(layerData.id);
+      layer.visible = layerData.visible;
+
+      // Restore tiles
+      layerData.tileData.forEach(tile => {
+        layer.addTile(tile.gridX, tile.gridY, tile.sourceX, tile.sourceY);
+        layer.ctx.drawImage(
+          img,
+          tile.sourceX,
+          tile.sourceY,
+          32, 32,
+          tile.gridX,
+          tile.gridY,
+          32, 32
+        );
+      });
+
+      this.layers.push(layer);
+    });
+
+    this.activeLayerId = state.activeLayerId;
+    this.nextLayerId = state.nextLayerId;
+
+    this.updateLayersList();
+    this.redrawMainCanvas();
+  }
+
   setupEventListeners() {
     document.getElementById('addLayer').addEventListener('click', () => this.addLayer());
 
@@ -78,6 +140,10 @@ class LayerManager {
         this.updateLayersList();
       }
     });
+
+    // Setup save/load event listeners
+    document.getElementById('saveState').addEventListener('click', () => this.saveState());
+    document.getElementById('loadState').addEventListener('click', () => this.loadState());
 
     // Setup drag and drop event listeners on the layers list container
     const layersList = document.getElementById('layersList');
@@ -208,6 +274,7 @@ class LayerManager {
 }
 
 var img = new Image();
+img.crossOrigin = 'anonymous'; // Add crossOrigin attribute
 img.onerror = function(e) {
   console.error('Error loading image:', e);
 };
@@ -231,7 +298,6 @@ let selectedTilePos = { row: 0, col: 0 }; // Track the selected tile position
 let lastSelectedCell = null; // Track the last selected cell for highlighting
 let showGrid = true; // Track grid visibility state
 let layerManager; // Layer manager instance
-let paletteBaseImage = null; // Store the base palette image without selection
 
 const drawGrid = (ctx, width, height, gridSize) => {
   if (!showGrid) return; // Skip grid drawing if grid is toggled off
@@ -328,6 +394,9 @@ const applyTileToView = (e) => {
       32, 32                    // destination width/height
     );
 
+    // Store tile data
+    activeLayer.addTile(gridX, gridY, selectedTilePos.col * 32, selectedTilePos.row * 32);
+
     // Update main canvas
     layerManager.redrawMainCanvas();
   }
@@ -367,10 +436,6 @@ const genPallette = (el) => {
     }
   }
 
-  // Store the base palette image
-  paletteBaseImage = new Image();
-  paletteBaseImage.src = canvas.toDataURL();
-
   // Add click handler to the canvas
   canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -402,10 +467,25 @@ const genPallette = (el) => {
       displaySize
     );
 
-    // Restore the original palette state
-    ctx.drawImage(paletteBaseImage, 0, 0);
+    // Redraw palette and add selection border
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        ctx.drawImage(
+          img,
+          j * tileSize,
+          i * tileSize,
+          tileSize,
+          tileSize,
+          j * displaySize,
+          i * displaySize,
+          displaySize,
+          displaySize
+        );
+      }
+    }
 
-    // Draw new selection border
+    // Draw selection border
     ctx.strokeStyle = '#3498db';
     ctx.lineWidth = 2;
     ctx.strokeRect(
