@@ -231,6 +231,7 @@ let selectedTilePos = { row: 0, col: 0 }; // Track the selected tile position
 let lastSelectedCell = null; // Track the last selected cell for highlighting
 let showGrid = true; // Track grid visibility state
 let layerManager; // Layer manager instance
+let paletteBaseImage = null; // Store the base palette image without selection
 
 const drawGrid = (ctx, width, height, gridSize) => {
   if (!showGrid) return; // Skip grid drawing if grid is toggled off
@@ -333,64 +334,93 @@ const applyTileToView = (e) => {
 }
 
 const genPallette = (el) => {
-  let rows = 95;
-  let cols = 64;
-  const baseWidth = 32;
-  const baseHeight = 32;
-  let tilesGenerated = 0;
-  const totalTiles = rows * cols;
+  const rows = 95;
+  const cols = 64;
+  const tileSize = 32;
+  const displaySize = 64;
 
-  // Clear existing content
+  // Create a single canvas for the palette
+  const canvas = document.createElement('canvas');
+  canvas.width = cols * displaySize;
+  canvas.height = rows * displaySize;
+  canvas.className = 'pallette-canvas';
   el.innerHTML = '';
+  el.appendChild(canvas);
 
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // Draw all tiles at once
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
-      let can = document.createElement("canvas");
-      Object.assign(can, {
-        className: 'cell',
-        height: 64,
-        width: 64
-      });
-      can.dataset.row = i;
-      can.dataset.col = j;
-      el.appendChild(can);
-      let ctx = can.getContext("2d");
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(img, baseWidth * j, baseHeight * i, baseWidth, baseHeight, 0, 0, 64, 64);
-
-      tilesGenerated++;
-      // Update progress (60-95% range for tile generation)
-      const progress = 60 + (tilesGenerated / totalTiles) * 35;
-      progressFill.style.width = progress + '%';
-
-      can.addEventListener("click", () => {
-        if (lastSelectedCell) {
-          lastSelectedCell.style.borderColor = 'transparent';
-        }
-        can.style.borderColor = '#3498db';
-        lastSelectedCell = can;
-        selectedTile(can.dataset.row, can.dataset.col, can);
-      });
+      ctx.drawImage(
+        img,
+        j * tileSize,
+        i * tileSize,
+        tileSize,
+        tileSize,
+        j * displaySize,
+        i * displaySize,
+        displaySize,
+        displaySize
+      );
     }
   }
+
+  // Store the base palette image
+  paletteBaseImage = new Image();
+  paletteBaseImage.src = canvas.toDataURL();
+
+  // Add click handler to the canvas
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Calculate which tile was clicked
+    const col = Math.floor(x / displaySize);
+    const row = Math.floor(y / displaySize);
+
+    // Update selected tile position
+    selectedTilePos.row = row;
+    selectedTilePos.col = col;
+
+    // Draw selected tile preview
+    const ccanvas = document.querySelector("#chosencanvas");
+    const chosenCtx = ccanvas.getContext("2d");
+    chosenCtx.imageSmoothingEnabled = false;
+    chosenCtx.clearRect(0, 0, ccanvas.width, ccanvas.height);
+    chosenCtx.drawImage(
+      img,
+      col * tileSize,
+      row * tileSize,
+      tileSize,
+      tileSize,
+      0,
+      0,
+      displaySize,
+      displaySize
+    );
+
+    // Restore the original palette state
+    ctx.drawImage(paletteBaseImage, 0, 0);
+
+    // Draw new selection border
+    ctx.strokeStyle = '#3498db';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+      col * displaySize,
+      row * displaySize,
+      displaySize,
+      displaySize
+    );
+  });
 
   // Complete the progress and hide the popup
   progressFill.style.width = '100%';
   setTimeout(() => {
     progressPopup.style.display = 'none';
   }, 500);
-}
-
-const selectedTile = (row, col, can) => {
-  // Update selected tile position
-  selectedTilePos.row = parseInt(row);
-  selectedTilePos.col = parseInt(col);
-
-  const ccanvas = document.querySelector("#chosencanvas");
-  let ctx = ccanvas.getContext("2d");
-  ctx.imageSmoothingEnabled = false;
-  ctx.clearRect(0, 0, ccanvas.width, ccanvas.height);
-  ctx.drawImage(can, 0, 0, 64, 64, 0, 0, 64, 64);
 }
 
 window.addEventListener('load', () => {

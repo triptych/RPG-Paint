@@ -195,7 +195,7 @@ h2 {
   color: #c0392b;
 }
 
-.pallette {
+#inner {
   width: 100%;
   height: 400px;
   border: 2px solid var(--accent-color);
@@ -206,14 +206,9 @@ h2 {
   box-sizing: border-box;
 }
 
-.cell {
-  border: 1px solid transparent;
+.pallette-canvas {
+  image-rendering: pixelated;
   cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.cell:hover {
-  border-color: var(--accent-color);
 }
 
 .chosen-section {
@@ -258,25 +253,25 @@ h2 {
 }
 
 /* Scrollbar styling */
-.pallette::-webkit-scrollbar,
+#inner::-webkit-scrollbar,
 .layers-list::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.pallette::-webkit-scrollbar-track,
+#inner::-webkit-scrollbar-track,
 .layers-list::-webkit-scrollbar-track {
   background: var(--background-color);
   border-radius: 4px;
 }
 
-.pallette::-webkit-scrollbar-thumb,
+#inner::-webkit-scrollbar-thumb,
 .layers-list::-webkit-scrollbar-thumb {
   background: var(--accent-color);
   border-radius: 4px;
 }
 
-.pallette::-webkit-scrollbar-thumb:hover,
+#inner::-webkit-scrollbar-thumb:hover,
 .layers-list::-webkit-scrollbar-thumb:hover {
   background: #2980b9;
 }
