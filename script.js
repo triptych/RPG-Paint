@@ -2,9 +2,19 @@ var img = new Image();
 img.onerror = function(e) {
   console.error('Error loading image:', e);
 };
+
+// Show progress popup when starting to load
+const progressPopup = document.getElementById('progress-popup');
+const progressFill = document.querySelector('.progress-fill');
+progressPopup.style.display = 'block';
+progressFill.style.width = '30%'; // Initial progress - image loading
+
 img.onload = function(e) {
   console.log('Image loaded successfully');
-  genPallette(document.querySelector('#inner'));
+  progressFill.style.width = '60%'; // Update progress - image loaded
+  setTimeout(() => {
+    genPallette(document.querySelector('#inner'));
+  }, 0);
 }
 img.src = 'ProjectUtumno_full.png';
 
@@ -96,6 +106,8 @@ const genPallette = (el) => {
   let cols = 64;
   const baseWidth = 32;
   const baseHeight = 32;
+  let tilesGenerated = 0;
+  const totalTiles = rows * cols;
 
   // Clear existing content
   el.innerHTML = '';
@@ -114,6 +126,12 @@ const genPallette = (el) => {
       let ctx = can.getContext("2d");
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(img, baseWidth * j, baseHeight * i, baseWidth, baseHeight, 0, 0, 64, 64);
+
+      tilesGenerated++;
+      // Update progress (60-95% range for tile generation)
+      const progress = 60 + (tilesGenerated / totalTiles) * 35;
+      progressFill.style.width = progress + '%';
+
       can.addEventListener("click", () => {
         if (lastSelectedCell) {
           lastSelectedCell.style.borderColor = 'transparent';
@@ -124,6 +142,12 @@ const genPallette = (el) => {
       });
     }
   }
+
+  // Complete the progress and hide the popup
+  progressFill.style.width = '100%';
+  setTimeout(() => {
+    progressPopup.style.display = 'none';
+  }, 500);
 }
 
 const selectedTile = (row, col, can) => {
