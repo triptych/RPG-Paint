@@ -180,3 +180,23 @@ h2 {
   width: 0%;
   transition: width 0.3s ease;
 }
+
+/* Footer Styles */
+.footer {
+  text-align: center;
+  margin-top: var(--spacing);
+  padding: var(--spacing);
+  background-color: white;
+  border-radius: var(--border-radius);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.footer a {
+  color: var(--accent-color);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer a:hover {
+  color: #2980b9;
+}
