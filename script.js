@@ -18,6 +18,7 @@ class LayerManager {
     this.layers = [];
     this.activeLayerId = 0;
     this.nextLayerId = 1;
+    this.draggedLayer = null;
 
     // Create initial layer
     this.addLayer();
@@ -77,12 +78,93 @@ class LayerManager {
         this.updateLayersList();
       }
     });
+
+    // Setup drag and drop event listeners on the layers list container
+    const layersList = document.getElementById('layersList');
+    layersList.addEventListener('dragstart', (e) => {
+      const layerItem = e.target.closest('.layer-item');
+      if (!layerItem) return;
+
+      this.draggedLayer = parseInt(layerItem.dataset.layer);
+      e.target.style.opacity = '0.5';
+
+      // Required for Firefox
+      e.dataTransfer.setData('text/plain', '');
+    });
+
+    layersList.addEventListener('dragend', (e) => {
+      e.target.style.opacity = '1';
+      this.draggedLayer = null;
+    });
+
+    layersList.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const layerItem = e.target.closest('.layer-item');
+      if (!layerItem) return;
+
+      const rect = layerItem.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+
+      // Remove existing drop indicators
+      layersList.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+
+      // Create and position drop indicator
+      const indicator = document.createElement('div');
+      indicator.className = 'drop-indicator';
+
+      if (e.clientY < midpoint) {
+        layerItem.parentNode.insertBefore(indicator, layerItem);
+      } else {
+        layerItem.parentNode.insertBefore(indicator, layerItem.nextSibling);
+      }
+    });
+
+    layersList.addEventListener('dragleave', () => {
+      // Remove drop indicators when dragging outside
+      layersList.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+    });
+
+    layersList.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const layerItem = e.target.closest('.layer-item');
+      if (!layerItem || this.draggedLayer === null) return;
+
+      const targetId = parseInt(layerItem.dataset.layer);
+      const sourceIndex = this.layers.findIndex(l => l.id === this.draggedLayer);
+      const targetIndex = this.layers.findIndex(l => l.id === targetId);
+
+      if (sourceIndex === -1 || targetIndex === -1) return;
+
+      // Get drop position relative to target element
+      const rect = layerItem.getBoundingClientRect();
+      const dropPosition = e.clientY < (rect.top + rect.height / 2) ? 'before' : 'after';
+
+      // Remove the layer from its current position
+      const [movedLayer] = this.layers.splice(sourceIndex, 1);
+
+      // Calculate new target index based on drop position
+      const newTargetIndex = dropPosition === 'before' ?
+        targetIndex > sourceIndex ? targetIndex - 1 : targetIndex :
+        targetIndex > sourceIndex ? targetIndex : targetIndex + 1;
+
+      // Insert the layer at the new position
+      this.layers.splice(newTargetIndex, 0, movedLayer);
+
+      // Remove drop indicators
+      layersList.querySelectorAll('.drop-indicator').forEach(el => el.remove());
+
+      // Update UI
+      this.updateLayersList();
+      this.redrawMainCanvas();
+    });
   }
 
   updateLayersList() {
     const layersList = document.getElementById('layersList');
     layersList.innerHTML = this.layers.map(layer => `
-      <div class="layer-item ${layer.id === this.activeLayerId ? 'active' : ''}" data-layer="${layer.id}">
+      <div class="layer-item ${layer.id === this.activeLayerId ? 'active' : ''}"
+           data-layer="${layer.id}"
+           draggable="true">
         <input type="checkbox" class="layer-visibility" ${layer.visible ? 'checked' : ''}>
         <span class="layer-name">Layer ${layer.id}</span>
         <button class="layer-delete" title="Delete layer">×</button>

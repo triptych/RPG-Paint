@@ -36,6 +36,7 @@ A web-based tile painting tool that lets you create 2D game maps or pixel art us
 ## Development
 
 The project consists of three main files:
+
 - `index.html`: Core structure and layout
 - `style.css`: Styling with CSS variables for theming
 - `script.js`: Canvas manipulation and interaction logic
