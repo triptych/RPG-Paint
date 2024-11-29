@@ -1,3 +1,130 @@
+class Layer {
+  constructor(id) {
+    this.id = id;
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = 320;
+    this.canvas.height = 320;
+    this.ctx = this.canvas.getContext('2d');
+    this.visible = true;
+  }
+
+  clear() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+}
+
+class LayerManager {
+  constructor() {
+    this.layers = [];
+    this.activeLayerId = 0;
+    this.nextLayerId = 1;
+
+    // Create initial layer
+    this.addLayer();
+
+    // Setup event listeners
+    this.setupEventListeners();
+  }
+
+  addLayer() {
+    const layer = new Layer(this.nextLayerId++);
+    this.layers.push(layer);
+    this.activeLayerId = layer.id;
+    this.updateLayersList();
+    return layer;
+  }
+
+  deleteLayer(id) {
+    if (this.layers.length <= 1) return; // Don't delete the last layer
+
+    const index = this.layers.findIndex(l => l.id === id);
+    if (index !== -1) {
+      this.layers.splice(index, 1);
+      if (this.activeLayerId === id) {
+        this.activeLayerId = this.layers[0].id;
+      }
+      this.updateLayersList();
+      this.redrawMainCanvas();
+    }
+  }
+
+  toggleLayerVisibility(id) {
+    const layer = this.layers.find(l => l.id === id);
+    if (layer) {
+      layer.visible = !layer.visible;
+      this.redrawMainCanvas();
+    }
+  }
+
+  getActiveLayer() {
+    return this.layers.find(l => l.id === this.activeLayerId);
+  }
+
+  setupEventListeners() {
+    document.getElementById('addLayer').addEventListener('click', () => this.addLayer());
+
+    document.getElementById('layersList').addEventListener('click', (e) => {
+      const layerItem = e.target.closest('.layer-item');
+      if (!layerItem) return;
+
+      if (e.target.classList.contains('layer-delete')) {
+        this.deleteLayer(parseInt(layerItem.dataset.layer));
+      } else if (e.target.classList.contains('layer-visibility')) {
+        this.toggleLayerVisibility(parseInt(layerItem.dataset.layer));
+      } else {
+        // Set active layer when clicking on layer item
+        this.activeLayerId = parseInt(layerItem.dataset.layer);
+        this.updateLayersList();
+      }
+    });
+  }
+
+  updateLayersList() {
+    const layersList = document.getElementById('layersList');
+    layersList.innerHTML = this.layers.map(layer => `
+      <div class="layer-item ${layer.id === this.activeLayerId ? 'active' : ''}" data-layer="${layer.id}">
+        <input type="checkbox" class="layer-visibility" ${layer.visible ? 'checked' : ''}>
+        <span class="layer-name">Layer ${layer.id}</span>
+        <button class="layer-delete" title="Delete layer">×</button>
+      </div>
+    `).join('');
+  }
+
+  redrawMainCanvas() {
+    const mainCanvas = document.getElementById('canvas1');
+    const ctx = mainCanvas.getContext('2d');
+    ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+
+    // Draw all visible layers from bottom to top
+    this.layers.forEach(layer => {
+      if (layer.visible) {
+        ctx.drawImage(layer.canvas, 0, 0);
+      }
+    });
+
+    // Redraw grid if enabled
+    if (showGrid) {
+      drawGrid(ctx, mainCanvas.width, mainCanvas.height, 32);
+    }
+  }
+
+  // Get composite of all visible layers for download
+  getCompositeCanvas() {
+    const composite = document.createElement('canvas');
+    composite.width = 320;
+    composite.height = 320;
+    const ctx = composite.getContext('2d');
+
+    this.layers.forEach(layer => {
+      if (layer.visible) {
+        ctx.drawImage(layer.canvas, 0, 0);
+      }
+    });
+
+    return composite;
+  }
+}
+
 var img = new Image();
 img.onerror = function(e) {
   console.error('Error loading image:', e);
@@ -21,6 +148,7 @@ img.src = 'ProjectUtumno_full.png';
 let selectedTilePos = { row: 0, col: 0 }; // Track the selected tile position
 let lastSelectedCell = null; // Track the last selected cell for highlighting
 let showGrid = true; // Track grid visibility state
+let layerManager; // Layer manager instance
 
 const drawGrid = (ctx, width, height, gridSize) => {
   if (!showGrid) return; // Skip grid drawing if grid is toggled off
@@ -46,17 +174,16 @@ const drawGrid = (ctx, width, height, gridSize) => {
 }
 
 const redrawCanvas = (canvas) => {
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Redraw all tiles from stored positions (if we had them)
-  // For now just redraw the grid
-  drawGrid(ctx, canvas.width, canvas.height, 32);
+  layerManager.redrawMainCanvas();
 }
 
 const genViewPort = () => {
   let vp = document.querySelector('#canvas1');
   let ctx = vp.getContext("2d", { alpha: true });
+
+  // Initialize layer manager
+  layerManager = new LayerManager();
+
   drawGrid(ctx, vp.width, vp.height, 32);
 
   // Setup grid toggle functionality
@@ -71,26 +198,16 @@ const genViewPort = () => {
   downloadLink.addEventListener('click', function(e) {
     e.preventDefault();
 
-    // Temporarily hide grid if it's shown
-    const gridWasShown = showGrid;
-    if (gridWasShown) {
-      showGrid = false;
-      redrawCanvas(vp);
-    }
+    // Get composite of visible layers without grid
+    const composite = layerManager.getCompositeCanvas();
 
     // Create a temporary link element
     const tempLink = document.createElement('a');
     tempLink.download = 'rpg-paint-creation.png';
-    tempLink.href = vp.toDataURL('image/png', 1.0);
+    tempLink.href = composite.toDataURL('image/png', 1.0);
     document.body.appendChild(tempLink);
     tempLink.click();
     document.body.removeChild(tempLink);
-
-    // Restore grid if it was shown
-    if (gridWasShown) {
-      showGrid = true;
-      redrawCanvas(vp);
-    }
   });
 
   vp.addEventListener("click", (e) => {
@@ -111,25 +228,27 @@ const applyTileToView = (e) => {
   const gridX = Math.floor(x / gridSize) * gridSize;
   const gridY = Math.floor(y / gridSize) * gridSize;
 
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
+  // Get active layer and draw on it
+  const activeLayer = layerManager.getActiveLayer();
+  if (activeLayer) {
+    const ctx = activeLayer.ctx;
+    ctx.imageSmoothingEnabled = false;
 
-  // Clear the specific grid cell
-  ctx.clearRect(gridX, gridY, gridSize, gridSize);
+    // Clear the specific grid cell
+    ctx.clearRect(gridX, gridY, gridSize, gridSize);
 
-  // Draw the selected tile at the grid position
-  ctx.drawImage(
-    img,
-    selectedTilePos.col * 32,  // source x
-    selectedTilePos.row * 32,  // source y
-    32, 32,                    // source width/height
-    gridX, gridY,             // destination x/y
-    32, 32                    // destination width/height
-  );
+    // Draw the selected tile at the grid position
+    ctx.drawImage(
+      img,
+      selectedTilePos.col * 32,  // source x
+      selectedTilePos.row * 32,  // source y
+      32, 32,                    // source width/height
+      gridX, gridY,             // destination x/y
+      32, 32                    // destination width/height
+    );
 
-  // Redraw grid lines if grid is visible
-  if (showGrid) {
-    drawGrid(ctx, canvas.width, canvas.height, gridSize);
+    // Update main canvas
+    layerManager.redrawMainCanvas();
   }
 }
 
