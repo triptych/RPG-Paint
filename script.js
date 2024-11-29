@@ -20,8 +20,11 @@ img.src = 'ProjectUtumno_full.png';
 
 let selectedTilePos = { row: 0, col: 0 }; // Track the selected tile position
 let lastSelectedCell = null; // Track the last selected cell for highlighting
+let showGrid = true; // Track grid visibility state
 
 const drawGrid = (ctx, width, height, gridSize) => {
+  if (!showGrid) return; // Skip grid drawing if grid is toggled off
+
   ctx.strokeStyle = '#e0e0e0';
   ctx.lineWidth = 1;
 
@@ -42,25 +45,52 @@ const drawGrid = (ctx, width, height, gridSize) => {
   }
 }
 
+const redrawCanvas = (canvas) => {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Redraw all tiles from stored positions (if we had them)
+  // For now just redraw the grid
+  drawGrid(ctx, canvas.width, canvas.height, 32);
+}
+
 const genViewPort = () => {
   let vp = document.querySelector('#canvas1');
-  let ctx = vp.getContext("2d");
-  ctx.fillStyle = 'white';
-  ctx.fillRect(0, 0, vp.width, vp.height);
-
+  let ctx = vp.getContext("2d", { alpha: true });
   drawGrid(ctx, vp.width, vp.height, 32);
+
+  // Setup grid toggle functionality
+  const gridToggle = document.querySelector('#gridToggle');
+  gridToggle.addEventListener('change', (e) => {
+    showGrid = e.target.checked;
+    redrawCanvas(vp);
+  });
 
   // Setup download functionality
   const downloadLink = document.querySelector('#downloadable');
   downloadLink.addEventListener('click', function(e) {
     e.preventDefault();
+
+    // Temporarily hide grid if it's shown
+    const gridWasShown = showGrid;
+    if (gridWasShown) {
+      showGrid = false;
+      redrawCanvas(vp);
+    }
+
     // Create a temporary link element
     const tempLink = document.createElement('a');
     tempLink.download = 'rpg-paint-creation.png';
-    tempLink.href = vp.toDataURL('image/png');
+    tempLink.href = vp.toDataURL('image/png', 1.0);
     document.body.appendChild(tempLink);
     tempLink.click();
     document.body.removeChild(tempLink);
+
+    // Restore grid if it was shown
+    if (gridWasShown) {
+      showGrid = true;
+      redrawCanvas(vp);
+    }
   });
 
   vp.addEventListener("click", (e) => {
@@ -97,8 +127,10 @@ const applyTileToView = (e) => {
     32, 32                    // destination width/height
   );
 
-  // Redraw grid lines for this cell
-  drawGrid(ctx, canvas.width, canvas.height, gridSize);
+  // Redraw grid lines if grid is visible
+  if (showGrid) {
+    drawGrid(ctx, canvas.width, canvas.height, gridSize);
+  }
 }
 
 const genPallette = (el) => {

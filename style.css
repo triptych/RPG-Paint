@@ -44,6 +44,28 @@ h2 {
   gap: var(--spacing);
 }
 
+.viewport-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing);
+}
+
+.grid-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--secondary-color);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.grid-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 #canvas1 {
   border: 2px solid var(--accent-color);
   border-radius: var(--border-radius);
