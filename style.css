@@ -24,6 +24,7 @@ h1 {
 h2 {
   color: var(--secondary-color);
   margin: 0 0 var(--spacing) 0;
+  font-size: 1rem;
 }
 
 .main {
@@ -41,7 +42,14 @@ h2 {
 .viewport {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing);
+  min-width: 320px;
+}
+
+#canvas1 {
+  border: 2px solid var(--accent-color);
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  cursor: crosshair;
+  background-color: white;
 }
 
 .viewport-controls {
@@ -49,6 +57,7 @@ h2 {
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing);
+  margin-top: var(--spacing);
 }
 
 .grid-toggle {
@@ -66,13 +75,6 @@ h2 {
   cursor: pointer;
 }
 
-#canvas1 {
-  border: 2px solid var(--accent-color);
-  border-radius: var(--border-radius);
-  cursor: crosshair;
-  background-color: white;
-}
-
 .tools {
   padding: var(--spacing);
   background-color: var(--background-color);
@@ -82,10 +84,12 @@ h2 {
 
 /* Layers Section Styles */
 .layers-section {
-  margin-bottom: var(--spacing);
-  background-color: white;
+  background-color: var(--background-color);
   padding: var(--spacing);
-  border-radius: var(--border-radius);
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: -2px;
 }
 
 .layers-controls {
@@ -121,7 +125,7 @@ h2 {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background-color: var(--background-color);
+  background-color: white;
   border-radius: 4px;
   cursor: grab;
   user-select: none;

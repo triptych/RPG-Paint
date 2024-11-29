@@ -295,8 +295,6 @@ const genViewPort = () => {
   vp.addEventListener("click", (e) => {
     applyTileToView(e);
   });
-
-  return vp;
 }
 
 const applyTileToView = (e) => {
@@ -396,5 +394,5 @@ const selectedTile = (row, col, can) => {
 }
 
 window.addEventListener('load', () => {
-  document.querySelector('.viewport').appendChild(genViewPort());
+  genViewPort();
 });
